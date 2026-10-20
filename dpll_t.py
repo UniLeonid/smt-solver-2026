@@ -50,7 +50,23 @@ class DPLL_T_Solver:
             self.prop_solver.add(self.T2B(f))
 
     def check(self):
-        raise NotImplementedError()
+        while True:
+            if self.prop_solver.check() == unsat:
+                return unsat
+
+            literals = self.B2T(self.prop_solver.model())
+
+            theory_solver = self.theory_solver()
+            theory_solver.add(*literals)
+            if theory_solver.check() == sat:
+                return sat
+
+            core = theory_solver.unsat_core()
+            self.prop_solver.add(
+                self.T2B(
+                    Or([Not(literal) for literal in core])
+                )
+            )
 
 
 class TheorySolver:

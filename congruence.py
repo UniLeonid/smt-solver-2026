@@ -49,7 +49,35 @@ class CongruenceSolver(EqTheorySolver):
         self.disequalities.append((a, b))
 
     def check(self):
-        raise NotImplementedError()
+        for left, right in self.equalities:
+            self.union(left, right)
+
+        func_terms = []
+        for term in self.terms.values():
+            if term.num_args() > 0:
+                func_terms.append(term)
+
+        changed = True
+        while changed:
+            changed = False
+            terms = {}
+            for term in func_terms:
+                key = [term.decl().get_id()]
+                for child in term.children():
+                    key.append(self.find(child))
+                key = tuple(key)
+
+                if key not in terms:
+                    terms[key] = term
+                elif self.find(terms[key]) != self.find(term):
+                    self.union(terms[key], term)
+                    changed = True
+
+        for left, right in self.disequalities:
+            if self.find(left) == self.find(right):
+                return unsat
+
+        return sat
 
 
 def CongruenceSolver_test1():

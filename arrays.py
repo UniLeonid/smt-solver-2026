@@ -10,7 +10,37 @@ def array_to_euf(formulas):
     Полезное из API z3: `is_select(t)`, `is_store(t)`, `t.arg(i)`, `Select(A, y)`, `If(c, a, b)`,
     `Function(name, *sorts)`, `A.domain()`, `A.range()`
     """
-    raise NotImplementedError()
+    functions = {}
+    cache = {}
+
+    def unwrap(A, index):
+        key = (A.get_id(), index.get_id())
+
+        out = cache.get(key, None)
+        if out is None:
+            if is_store(A):
+                array, store_index, value = A.arg(0), A.arg(1), A.arg(2)
+
+                out = If(store_index == index, value, unwrap(array, index))
+            else:
+                if A.get_id() not in functions:
+                    functions[A.get_id()] = Function(f"array_{A}", A.domain(), A.range())
+
+                out = functions[A.get_id()](index)
+
+            cache[key] = out
+
+        return out
+
+    def replace(term):
+        if is_select(term):
+            return unwrap(term.arg(0), term.arg(1))
+        return term
+
+    result = []
+    for formula in formulas:
+        result.append(rewrite(formula, replace))
+    return result
 
 
 def rewrite(e, f):
